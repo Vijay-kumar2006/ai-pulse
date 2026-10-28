@@ -53,3 +53,22 @@ def submit(body: SubmitIn, m: models.Membership = Depends(current_membership), d
         db.add(resp)
     db.commit()
     return {"saved": len(body.answers)}
+
+
+@router.delete("/responses")
+def delete_my_responses(
+    m: models.Membership = Depends(current_membership),
+    db: Session = Depends(get_db),
+):
+    """Client Request #2: Right to delete.
+    Permanently deletes all submitted diagnostic answers and scoring records
+    for the current user in this organization immediately.
+    """
+    deleted_count = (
+        db.query(models.Response)
+        .filter_by(membership_id=m.id)
+        .delete(synchronize_session="fetch")
+    )
+    db.commit()
+    return {"status": "deleted", "deleted_count": deleted_count}
+

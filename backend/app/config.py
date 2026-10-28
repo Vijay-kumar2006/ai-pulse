@@ -9,7 +9,7 @@ if os.path.exists(_env_path):
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-SECRET_KEY = os.getenv("SECRET_KEY", "ai-pulse-dev-secret")
+SECRET_KEY = os.getenv("SECRET_KEY", "ai-pulse-default-dev-secret-key-32bytes-min!")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./aipulse.db")
 AI_MODE = os.getenv("AI_MODE", "mock")  # "mock" or "live"
 LLM_API_URL = os.getenv("LLM_API_URL", "")

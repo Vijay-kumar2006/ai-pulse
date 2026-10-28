@@ -10,12 +10,15 @@ from .db import get_db
 from . import models
 
 
+import hmac
+
+
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return hash_password(password) == hashed
+    return hmac.compare_digest(hash_password(password), hashed)
 
 
 def make_token(user_id: int, org_id: int | None = None) -> str:

@@ -3,6 +3,7 @@ import pytest
 
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 os.environ["AI_MODE"] = "mock"
+os.environ["SECRET_KEY"] = "test-secret-key-at-least-32-bytes-long-for-pyjwt-rfc7518"
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402

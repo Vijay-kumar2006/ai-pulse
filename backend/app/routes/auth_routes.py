@@ -27,7 +27,9 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
         {"org_id": m.org_id, "org_name": m.org.name, "role": m.role}
         for m in user.memberships
     ]
-    return {"token": make_token(user.id), "name": user.name, "organizations": orgs}
+    default_org_id = user.memberships[0].org_id if len(user.memberships) == 1 else None
+    return {"token": make_token(user.id, default_org_id), "name": user.name, "organizations": orgs}
+
 
 
 @router.post("/select-org")
