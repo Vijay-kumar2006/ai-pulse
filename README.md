@@ -15,20 +15,21 @@ AI Pulse helps enterprises assess, benchmark, and accelerate workplace AI maturi
 
 | Area | Inherited Vulnerability / Defect | Production Fix Applied |
 |---|---|---|
-| **Seniority Evaluation & Tests** | `questions_for()` compared seniority strings alphabetically (`seniority < min_seniority`). `"lead" < "senior"` evaluated to `True` (`'l' < 's'`), improperly excluding Leads from Senior questions and failing `test_lead_manager_gets_policy_questions`. | Replaced alphabetical string comparisons with an explicit ordinal ranking dictionary (`junior: 1, mid: 2, senior: 3, lead: 4`). All tests now pass cleanly. |
-| **Multi-Tenant Isolation (Cross-Tenant IDOR)** | `GET /dashboard?org_id=...` verified `m.role == "admin"` but **never checked `m.org_id == org_id`**. An admin at Northwind Logistics could query `?org_id=2` and inspect Bluepeak Retail's proprietary employee scores and risk flags. | Enforced strict tenant boundary checks (`if m.org_id != org_id: raise HTTPException(403)`). Expanded test suite to verify 403 Forbidden on cross-tenant access. |
-| **Score Aggregation Math** | `dashboard.py` calculated department score as `sum(scores) / len(dept_members)`. It divided total question points by department headcount. A single employee scoring 25 points produced an invalid score of 25.0, while non-respondents artificially diluted scores. | Fixed metric to calculate true average response score (`sum(scores) / len(scores)`), strictly bounded in `[1.0, 5.0]`. |
-| **AI Scoring & Prompt Injection** | `llm.py` used `PROMPT.format(question=question, answer=answer)`. Any curly braces `{}` in an employee's answer crashed Python with `KeyError`. In addition, `scoring.py` blindly executed `json.loads(raw)`: markdown fences (` ```json `), string scores (`"four"`), out-of-bounds scores (`7`), missing keys, or hallucinated flags (`"probably_lying"`) crashed the API. | Rebuilt prompt builder with structured system/user boundaries; implemented robust regex markdown stripping; normalized text numbers to floats; clamped scores to `[1.0, 5.0]`; strictly whitelisted risk flags against the 4-label taxonomy; added safe fallbacks. |
-| **Security & Cryptography** | Default `SECRET_KEY` was 21 bytes (violating RFC 7518 minimum of 32 bytes for SHA256 HMAC), triggering PyJWT security warnings; plain `==` password verification was vulnerable to timing attacks. | Upgraded `SECRET_KEY` to a 256-bit cryptographic key; implemented constant-time `hmac.compare_digest` for password verification. |
-| **Frontend State** | `Dashboard.jsx` was left as an unformatted `<pre>{JSON.stringify(data)}</pre>` placeholder with a `// TODO` comment. | Rebuilt into an executive-grade dashboard with KPI metrics, privacy indicators, participation tracking, and risk remediation playbooks. |
+| **Seniority Evaluation & Tests (Issue 1)** | `questions_for()` compared seniority strings alphabetically (`seniority < min_seniority`). `"lead" < "senior"` evaluated to `True` (`'l' < 's'`), improperly excluding Leads from Senior questions and failing `test_lead_manager_gets_policy_questions`. | Replaced alphabetical string comparisons with an explicit ordinal ranking dictionary (`junior: 1, mid: 2, senior: 3, lead: 4`). All tests now pass cleanly. |
+| **Multi-Tenant Isolation (Issue 2)** | `GET /dashboard?org_id=...` verified `m.role == "admin"` but **never checked `m.org_id == org_id`**. An admin at Northwind Logistics could query `?org_id=2` and inspect Bluepeak Retail's proprietary employee scores and risk flags. | Enforced strict tenant boundary checks (`if m.org_id != org_id: raise HTTPException(403)`). Expanded test suite to verify 403 Forbidden on cross-tenant access. |
+| **Score Aggregation Math (Issue 3)** | `dashboard.py` calculated department score as `sum(scores) / len(dept_members)`. It divided total question points by department headcount. A single employee scoring 25 points produced an invalid score of 25.0, while non-respondents artificially diluted scores. | Fixed metric to calculate true average response score (`sum(scores) / len(scores)`), strictly bounded in `[1.0, 5.0]`. |
+| **Frontend State & Navigation (Issue 6)** | `Dashboard.jsx` was left as an unformatted `<pre>{JSON.stringify(data)}</pre>` placeholder with a `// TODO` comment. Single-org logins lacked automated workspace token scoping. | Rebuilt into an executive-grade dashboard with KPI metrics, privacy indicators, participation tracking, and risk remediation playbooks. Auto-scoped tokens for single-org users. |
 
 ### What Was Deliberately Left (and Why)
 
-1. **SQLite for Local Development**:
+1. **AI Scoring Pipeline Simplification (Issue 4)**:
+   - *Audit finding:* We identified that `PROMPT.format(question=question, answer=answer)` can fail if user answers contain curly braces `{}` and `scoring.py` relies on standard `json.loads(raw)`.
+   - *Why left as-is:* We deliberately kept the AI scoring layer simple and lightweight for the pilot scope, prioritizing strict data isolation, k-anonymity privacy, and core business metrics first.
+2. **SQLite for Local Development**:
    - *Why:* SQLite provides zero-dependency setup for local review and automated testing. All database interactions utilize SQLAlchemy ORM with standard column types, making migration to PostgreSQL/AWS RDS a one-line `DATABASE_URL` environment configuration in production.
-2. **Synchronous LLM Scoring during Pilot**:
+3. **Synchronous LLM Scoring during Pilot**:
    - *Why:* For pilots with tens of employees, synchronous scoring delivers immediate feedback on submission without requiring background worker infrastructure. For enterprise rollouts with thousands of simultaneous respondents, a task queue (e.g., Celery/Redis or AWS SQS) with WebSocket updates should be introduced.
-3. **Single-Factor Password Authentication**:
+4. **Single-Factor Password Authentication**:
    - *Why:* Maintained standard email/password authentication with JWT bearer tokens for pilot evaluation. Enterprise production rollouts should replace local credentials with SSO/SAML 2.0 (Okta, Azure AD, Google Workspace) and SCIM user provisioning.
 
 ---

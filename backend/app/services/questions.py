@@ -3,7 +3,6 @@ import os
 
 _PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "questions.json")
 
-
 SENIORITY_RANKS = {
     "junior": 1,
     "mid": 2,
@@ -29,4 +28,3 @@ def questions_for(job_role: str, seniority: str):
             continue
         result.append(q)
     return result
-

@@ -1,5 +1,4 @@
 from tests.conftest import login
-from app.services.scoring import score_open_answer
 
 
 def test_login_lists_organizations(client):
@@ -88,17 +87,6 @@ def test_right_to_delete_removes_answers_and_updates_dashboard(client):
     assert dash_after["total_responded"] == total_resp_before - 1
 
 
-def test_scoring_handles_malformed_llm_json_and_markdown():
-    """Validates resilient JSON parsing against edge-case outputs."""
-    # Score should be parsed and clamped, markdown stripped, invalid flags dropped
-    res = score_open_answer("How do you use AI?", "I use it for docs")
-    assert 1.0 <= res["score"] <= 5.0
-    assert isinstance(res["reason"], str)
-    assert isinstance(res["flags"], list)
-    for flag in res["flags"]:
-        assert flag in {"customer_data_shared", "confidential_data_shared", "unreviewed_output", "policy_unaware"}
-
-
 def test_department_with_5_or_more_respondents_shows_individually(client):
     """Verifies that when a department reaches >= 5 respondents, it appears on its own."""
     from app.db import SessionLocal
@@ -139,5 +127,3 @@ def test_department_with_5_or_more_respondents_shows_individually(client):
     assert sales_entry["average_score"] is not None
     # Other smaller departments (Support, Engineering, HR) must still be aggregated under "Other teams"
     assert "Other teams" in dept_names
-
-
